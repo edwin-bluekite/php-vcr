@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>Php-vcr by adri</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>Php-vcr</h1>
+          <h2>Record your test suite's HTTP interactions and replay them during future test runs for fast, deterministic, accurate tests.</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/adri/php-vcr/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/adri/php-vcr/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/adri/php-vcr" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <p><img src="https://dl.dropbox.com/u/13186339/blog/php-vcr.png" alt="PHP-VCR"></p>
+
+<p><a href="https://travis-ci.org/adri/php-vcr"><img src="https://travis-ci.org/adri/php-vcr.png?branch=master" alt="Build Status"></a>
+<a href="http://www.versioneye.com/user/projects/51512860926e440002004378"><img src="http://www.versioneye.com/user/projects/51512860926e440002004378/badge.png" alt="Dependency Status"></a></p>
+
+<p>This is a port of <a href="http://github.com/vcr/vcr">VCR</a> for ruby.</p>
+
+<p>Record your test suite's HTTP interactions and replay them during future test runs for fast, deterministic, accurate tests.</p>
+
+<h2>Features</h2>
+
+<ul>
+<li>Automatically records and replays your HTTP(s) interactions with minimal setup/configuration code.</li>
+<li>Supports common http functions and extensions
+
+<ul>
+<li>everyting using <a href="http://php.net/manual/en/class.streamwrapper.php">streamWrapper</a>: fopen(), fread(), file_get_contents(), ... without any modification</li>
+<li>
+<a href="http://www.php.net/manual/en/soapclient.soapclient.php">SoapClient</a> using your own wrapper class</li>
+<li>curl(),  using <a href="http://www.php.net/manual/en/book.runkit.php">runkit extension</a> and <code>runkit.internal_override=1</code> in your php.ini</li>
+<li>Todo: curl_multi()</li>
+</ul>
+</li>
+<li>The same request can receive different responses in different tests--just use different cassettes.</li>
+<li>Disables all HTTP requests that you don't explicitly allow (except SoapClient if not configured).</li>
+<li>Request matching is configurable based on HTTP method, URI, host, path, body and headers, or you can easily
+implement a custom request matcher to handle any need.</li>
+<li>The recorded requests and responses are stored on disk in a serialization format of your choice
+(currently YAML and JSON are built in, and you can easily implement your own custom serializer)</li>
+<li>Supports PHPUnit annotations.</li>
+<li>Todo: Recorded requests and responses can easily be inspected and edited.</li>
+<li>Todo: Automatically filters confidential or private information like passwords, auth tokens and emails.</li>
+<li>Todo: Automatically re-records cassettes on a configurable regular interval to keep them fresh and current.</li>
+<li>Todo: Has a good documentation ;-)</li>
+</ul><h2>Usage example</h2>
+
+<p>Using static method calls:</p>
+
+<div class="highlight"><pre><span class="k">class</span> <span class="nc">VCRTest</span> <span class="k">extends</span> <span class="nx">\PHPUnit_Framework_TestCase</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">testShouldInterceptStreamWrapper</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="c1">// After turning on the VCR will intercept all requests</span>
+        <span class="nx">VCR</span><span class="o">::</span><span class="na">turnOn</span><span class="p">();</span>
+
+        <span class="c1">// Record requests and responses in cassette file 'example'</span>
+        <span class="nx">VCR</span><span class="o">::</span><span class="na">insertCassette</span><span class="p">(</span><span class="s1">'example'</span><span class="p">);</span>
+
+        <span class="c1">// Following request will be recorded once and replayed in future test runs</span>
+        <span class="nv">$result</span> <span class="o">=</span> <span class="nb">file_get_contents</span><span class="p">(</span><span class="s1">'http://example.com'</span><span class="p">);</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">assertNotEmpty</span><span class="p">(</span><span class="nv">$result</span><span class="p">);</span>
+
+        <span class="c1">// To stop recording requests, eject the cassette</span>
+        <span class="nx">VCR</span><span class="o">::</span><span class="na">eject</span><span class="p">();</span>
+
+        <span class="c1">// Turn off VCR to stop intercepting requests</span>
+        <span class="nx">VCR</span><span class="o">::</span><span class="na">turnOff</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">testShouldThrowExceptionIfNoCasettePresent</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">setExpectedException</span><span class="p">(</span>
+            <span class="s1">'BadMethodCallException'</span><span class="p">,</span>
+            <span class="s2">"Invalid http request. No cassette inserted. Please make sure to insert "</span>
+            <span class="o">.</span> <span class="s2">"a cassette in your unit test using VCR::insertCassette('name');"</span>
+        <span class="p">);</span>
+        <span class="nx">VCR</span><span class="o">::</span><span class="na">turnOn</span><span class="p">();</span>
+        <span class="c1">// If there is no cassette inserted, a request throws an exception</span>
+        <span class="nb">file_get_contents</span><span class="p">(</span><span class="s1">'http://example.com'</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>You can use annotations in PHPUnit by using <a href="https://github.com/adri/phpunit-testlistener-vcr">phpunit-testlistener-vcr</a>:</p>
+
+<div class="highlight"><pre><span class="k">class</span> <span class="nc">VCRTest</span> <span class="k">extends</span> <span class="nx">\PHPUnit_Framework_TestCase</span>
+<span class="p">{</span>
+    <span class="sd">/**</span>
+<span class="sd">     * @vcr unittest_annotation_test</span>
+<span class="sd">     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">testInterceptsWithAnnotations</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="c1">// Requests are intercepted and stored into  tests/fixtures/unittest_annotation_test.</span>
+        <span class="nv">$result</span> <span class="o">=</span> <span class="nb">file_get_contents</span><span class="p">(</span><span class="s1">'http://google.com'</span><span class="p">);</span>
+
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">assertEquals</span><span class="p">(</span><span class="s1">'This is a annotation test dummy.'</span><span class="p">,</span> <span class="nv">$result</span><span class="p">,</span> <span class="s1">'Call was not intercepted (using annotations).'</span><span class="p">);</span>
+
+        <span class="c1">// VCR is automatically turned on and off.</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+<h2>Installation</h2>
+
+<p>Add php-vcr to your <code>composer.json</code>.</p>
+
+<div class="highlight"><pre>  <span class="s2">"adri/php-vcr"</span><span class="err">:</span> <span class="s2">"dev-master"</span>
+</pre></div>
+
+<div class="highlight"><pre>composer install
+</pre></div>
+
+<h2>Dependencies</h2>
+
+<p>PHP-VCR depends on:</p>
+
+<ul>
+<li>PHP 5.3+</li>
+<li>Curl extension</li>
+<li>HTTP library <a href="http://guzzlephp.org">Guzzle</a>
+</li>
+<li><a href="https://github.com/symfony/yaml">symfony/yaml</a></li>
+<li><a href="https://github.com/beberlei/assert">beberlei/assert</a></li>
+<li>(optional) runkit extension with <code>runkit.internal_override=1</code> in php.ini if you want to intercept curl</li>
+</ul><p>Composer installs all dependencies except extensions like curl or runkit.</p>
+
+<h2>Run tests</h2>
+
+<p>In order to run all tests you need to get development dependencies using composer:</p>
+
+<div class="highlight"><pre><span class="nx">composer</span> <span class="nx">install</span> <span class="o">--</span><span class="nx">dev</span>
+<span class="nx">phpunit</span> <span class="o">./</span><span class="nx">tests</span>
+</pre></div>
+
+<h2>Changelog</h2>
+
+<ul>
+<li>2013-05-15 Release 1.0.0</li>
+<li>2013-05-15 Adds PHPUnit annotations using <a href="https://github.com/adri/phpunit-testlistener-vcr">phpunit-testlistener-vcr</a>
+</li>
+<li>2013-05-14 Easier API (static method calls)</li>
+<li>2013-02-22 Added YAML support</li>
+<li>2013-02-21 Added custom request matcher</li>
+<li>2013-02-21 Added JSON storage which uses less memory</li>
+<li>2013-02-21 Added support for binary data</li>
+<li>2013-02-20 Added Soap support</li>
+<li>2013-02-19 Curl hook fixes, more tests</li>
+<li>2013-02-18 First prototype</li>
+</ul><h2>Copyright</h2>
+
+<p>Copyright (c) 2013 Adrian Philipp. Released under the terms of the MIT license. See LICENSE for details.</p>
+
+
+        </section>
+
+        <footer>
+          Php-vcr is maintained by <a href="https://github.com/adri">adri</a><br>
+          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="http://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
